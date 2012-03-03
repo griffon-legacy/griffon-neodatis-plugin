@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package griffon.neodatis
+package griffon.plugins.neodatis
 
 import org.neodatis.odb.core.query.nq.NativeQuery
 

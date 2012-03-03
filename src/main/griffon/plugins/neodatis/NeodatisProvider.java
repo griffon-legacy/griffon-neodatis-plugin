@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 the original author or authors.
+ * Copyright 2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
+package griffon.plugins.neodatis;
+
+import groovy.lang.Closure;
+import griffon.util.CallableWithArgs;
+
 /**
  * @author Andres Almiray
  */
+public interface NeodatisProvider {
+    Object withOdb(Closure closure);
 
-def eventClosure1 = binding.variables.containsKey('eventSetClasspath') ? eventSetClasspath : {cl->}
-eventSetClasspath = { cl ->
-    eventClosure1(cl)
-    if(compilingPlugin('neodatis')) return
-    griffonSettings.dependencyManager.flatDirResolver name: 'griffon-neodatis-plugin', dirs: "${neodatisPluginDir}/addon"
-    griffonSettings.dependencyManager.addPluginDependency('neodatis', [
-        conf: 'compile',
-        name: 'griffon-neodatis-addon',
-        group: 'org.codehaus.griffon.plugins',
-        version: neodatisPluginVersion
-    ])
+    Object withOdb(String databaseName, Closure closure);
+
+    <T> T withOdb(CallableWithArgs<T> callable);
+
+    <T> T withOdb(String databaseName, CallableWithArgs<T> callable);
 }

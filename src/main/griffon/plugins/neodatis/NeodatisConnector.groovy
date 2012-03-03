@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 the original author or authors.
+ * Copyright 2010-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package griffon.neodatis
+
+package griffon.plugins.neodatis
 
 import griffon.core.GriffonApplication
 import griffon.util.Environment
@@ -29,25 +30,10 @@ import org.neodatis.odb.*
  * @author Andres Almiray
  */
 @Singleton
-final class NeodatisConnector {
+final class NeodatisConnector implements NeodatisProvider {
     private bootstrap
 
     private static final Logger LOG = LoggerFactory.getLogger(NeodatisConnector)
-
-    static void enhance(MetaClass mc) {
-        mc.withOdb = {Closure closure ->
-            OdbHolder.instance.withOdb('default', closure)
-        }
-        mc.withOdb << {String databaseName, Closure closure ->
-            OdbHolder.instance.withOdb(databaseName, closure)
-        }
-        mc.withOdb << {CallableWithArgs callable ->
-            OdbHolder.instance.withOdb('default', callable)
-        }
-        mc.withOdb << {String databaseName, CallableWithArgs callable ->
-            OdbHolder.instance.withOdb(databaseName, callable)
-        }
-    }
 
     Object withOdb(String databaseName = 'default', Closure closure) {
         return OdbHolder.instance.withOdb(databaseName, closure)
