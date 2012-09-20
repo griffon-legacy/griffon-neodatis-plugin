@@ -2,14 +2,10 @@ griffon.project.dependency.resolution = {
     inherits "global"
     log "warn"
     repositories {
-        griffonPlugins()
-        griffonHome()
-        griffonCentral()
-
         flatDir name: 'neodatisPluginLib', dirs: 'lib'
     }
     dependencies {
-        compile 'org.neodatis.odb:neodatis-odb:2.1.beta14.209'
+        compile 'org.neodatis.odb:neodatis-odb:2.2.beta1.252'
     }
 }
 
@@ -22,4 +18,3 @@ griffon {
 }
 
 griffon.jars.destDir='target/addon'
-griffon.plugin.pack.additional.sources = ['src/gdsl']

@@ -34,7 +34,7 @@ class OdbHolder implements NeodatisProvider {
     private static final Logger LOG = LoggerFactory.getLogger(OdbHolder)
     private static final Object[] LOCK = new Object[0]
     private final Map<String, ODB> databases = [:]
-  
+
     String[] getDatabaseNames() {
         List<String> databaseNames = new ArrayList().addAll(databases.keySet())
         databaseNames.toArray(new String[databaseNames.size()])
@@ -47,14 +47,14 @@ class OdbHolder implements NeodatisProvider {
 
     void setDatabase(String databaseName = 'default', ODB db) {
         if(isBlank(databaseName)) databaseName = 'default'
-        storeDatabase(databaseName, db)       
+        storeDatabase(databaseName, db)
     }
 
     Object withOdb(String databaseName = 'default', Closure closure) {
         ODB db = fetchDatabase(databaseName)
         if(LOG.debugEnabled) LOG.debug("Executing statement on datasource '$databaseName'")
         Object result = null
-        try { 
+        try {
             result = closure(databaseName, db)
             db.commit()
         } catch(x) {
@@ -68,7 +68,7 @@ class OdbHolder implements NeodatisProvider {
         ODB db = fetchDatabase(databaseName)
         if(LOG.debugEnabled) LOG.debug("Executing statement on datasource '$databaseName'")
         T result = null
-        try { 
+        try {
             callable.args = [databaseName, db] as Object[]
             result = callable.run()
             db.commit()
@@ -86,7 +86,7 @@ class OdbHolder implements NeodatisProvider {
     
     void disconnectDatabase(String databaseName) {
         if(isBlank(databaseName)) databaseName = 'default'
-        storeDatabase(databaseName, null)        
+        storeDatabase(databaseName, null)
     }
 
     private ODB fetchDatabase(String databaseName) {
@@ -97,7 +97,7 @@ class OdbHolder implements NeodatisProvider {
             ConfigObject config = NeodatisConnector.instance.createConfig(app)
             db = NeodatisConnector.instance.connect(app, config, databaseName)
         }
-        
+
         if(db == null) {
             throw new IllegalArgumentException("No such Database configuration for name $databaseName")
         }

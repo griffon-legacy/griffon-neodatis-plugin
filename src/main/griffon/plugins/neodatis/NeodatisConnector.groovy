@@ -20,6 +20,7 @@ import griffon.core.GriffonApplication
 import griffon.util.Environment
 import griffon.util.Metadata
 import griffon.util.CallableWithArgs
+import griffon.util.ConfigUtils
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -46,8 +47,7 @@ final class NeodatisConnector implements NeodatisProvider {
     // ======================================================
 
     ConfigObject createConfig(GriffonApplication app) {
-        def databaseClass = app.class.classLoader.loadClass('NeodatisConfig')
-        new ConfigSlurper(Environment.current.name).parse(databaseClass)
+        ConfigUtils.loadConfigWithI18n('NeodatisConfig')
     }
 
     private ConfigObject narrowConfig(ConfigObject config, String databaseName) {
@@ -95,7 +95,7 @@ final class NeodatisConnector implements NeodatisProvider {
                 // ignore
             }
         }
-        
+
         if(isClient) {
             return NeoDatis.openClient(alias, neodatisConfig)
         } else {

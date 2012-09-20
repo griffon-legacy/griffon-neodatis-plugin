@@ -27,7 +27,7 @@ final class NeodatisEnhancer {
     private static final Logger LOG = LoggerFactory.getLogger(NeodatisEnhancer)
 
     private NeodatisEnhancer() {}
-    
+
     static void enhance(MetaClass mc, NeodatisProvider provider = OdbHolder.instance) {
         if(LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
         mc.withOdb = {Closure closure ->

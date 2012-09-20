@@ -61,7 +61,7 @@ class NeodatisGriffonAddon {
         }
     }
 
-    def events = [
+    Map events = [
         ShutdownStart: { app ->
             ConfigObject config = NeodatisConnector.instance.createConfig(app)
             NeodatisConnector.instance.disconnect(app, config)
