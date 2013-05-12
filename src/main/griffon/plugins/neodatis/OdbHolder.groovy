@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2012 the original author or authors.
+ * Copyright 2011-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,88 +20,66 @@ import org.neodatis.odb.ODB
 
 import griffon.core.GriffonApplication
 import griffon.util.ApplicationHolder
-import griffon.util.CallableWithArgs
 import static griffon.util.GriffonNameUtils.isBlank
-
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * @author Andres Almiray
  */
-@Singleton
-class OdbHolder implements NeodatisProvider {
-    private static final Logger LOG = LoggerFactory.getLogger(OdbHolder)
+class OdbHolder {
+    private static final String DEFAULT = 'default'
     private static final Object[] LOCK = new Object[0]
     private final Map<String, ODB> databases = [:]
+
+    private static final OdbHolder INSTANCE
+
+    static {
+        INSTANCE = new OdbHolder()
+    }
+
+    static OdbHolder getInstance() {
+        INSTANCE
+    }
+
+    private OdbHolder() {}
 
     String[] getDatabaseNames() {
         List<String> databaseNames = new ArrayList().addAll(databases.keySet())
         databaseNames.toArray(new String[databaseNames.size()])
     }
 
-    ODB getDatabase(String databaseName = 'default') {
-        if(isBlank(databaseName)) databaseName = 'default'
+    ODB getDatabase(String databaseName = DEFAULT) {
+        if (isBlank(databaseName)) databaseName = DEFAULT
         retrieveDatabase(databaseName)
     }
 
-    void setDatabase(String databaseName = 'default', ODB db) {
-        if(isBlank(databaseName)) databaseName = 'default'
-        storeDatabase(databaseName, db)
+    void setDatabase(String databaseName = DEFAULT, ODB database) {
+        if (isBlank(databaseName)) databaseName = DEFAULT
+        storeDatabase(databaseName, database)
     }
 
-    Object withOdb(String databaseName = 'default', Closure closure) {
-        ODB db = fetchDatabase(databaseName)
-        if(LOG.debugEnabled) LOG.debug("Executing statement on datasource '$databaseName'")
-        Object result = null
-        try {
-            result = closure(databaseName, db)
-            db.commit()
-        } catch(x) {
-            db.rollback()
-            throw x
-        }
-        return result
-    }
-
-    public <T> T withOdb(String databaseName = 'default', CallableWithArgs<T> callable) {
-        ODB db = fetchDatabase(databaseName)
-        if(LOG.debugEnabled) LOG.debug("Executing statement on datasource '$databaseName'")
-        T result = null
-        try {
-            callable.args = [databaseName, db] as Object[]
-            result = callable.run()
-            db.commit()
-        } catch(x) {
-            db.rollback()
-            throw x
-        }
-        return result
-    }
-    
     boolean isDatabaseConnected(String databaseName) {
-        if(isBlank(databaseName)) databaseName = 'default'
+        if (isBlank(databaseName)) databaseName = DEFAULT
         retrieveDatabase(databaseName) != null
     }
     
     void disconnectDatabase(String databaseName) {
-        if(isBlank(databaseName)) databaseName = 'default'
+        if (isBlank(databaseName)) databaseName = DEFAULT
         storeDatabase(databaseName, null)
     }
 
-    private ODB fetchDatabase(String databaseName) {
-        if(isBlank(databaseName)) databaseName = 'default'
-        ODB db = retrieveDatabase(databaseName)
-        if(db == null) {
+    ODB fetchDatabase(String databaseName) {
+        if (isBlank(databaseName)) databaseName = DEFAULT
+        ODB database = retrieveDatabase(databaseName)
+        if (database == null) {
             GriffonApplication app = ApplicationHolder.application
             ConfigObject config = NeodatisConnector.instance.createConfig(app)
-            db = NeodatisConnector.instance.connect(app, config, databaseName)
+            database = NeodatisConnector.instance.connect(app, config, databaseName)
         }
 
-        if(db == null) {
-            throw new IllegalArgumentException("No such Database configuration for name $databaseName")
+        if (database == null) {
+            throw new IllegalArgumentException("No such neodatis database configuration for name $databaseName")
         }
-        db
+        database
     }
 
     private ODB retrieveDatabase(String databaseName) {
@@ -110,9 +88,9 @@ class OdbHolder implements NeodatisProvider {
         }
     }
 
-    private void storeDatabase(String databaseName, ODB db) {
+    private void storeDatabase(String databaseName, ODB database) {
         synchronized(LOCK) {
-            databases[databaseName] = db
+            databases[databaseName] = database
         }
     }
 }

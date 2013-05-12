@@ -16,18 +16,26 @@
 
 package griffon.plugins.neodatis;
 
-import griffon.util.CallableWithArgs;
-import groovy.lang.Closure;
+import org.neodatis.odb.ODB;
 
 /**
  * @author Andres Almiray
  */
-public interface NeodatisProvider {
-    <R> R withOdb(Closure<R> closure);
+public class DefaultNeodatisProvider extends AbstractNeodatisProvider {
+    private static final DefaultNeodatisProvider INSTANCE;
 
-    <R> R withOdb(String databaseName, Closure<R> closure);
+    static {
+        INSTANCE = new DefaultNeodatisProvider();
+    }
 
-    <R> R withOdb(CallableWithArgs<R> callable);
+    public static DefaultNeodatisProvider getInstance() {
+        return INSTANCE;
+    }
 
-    <R> R withOdb(String databaseName, CallableWithArgs<R> callable);
+    private DefaultNeodatisProvider() {}
+
+    @Override
+    protected ODB getDatabase(String databaseName) {
+        return OdbHolder.getInstance().fetchDatabase(databaseName);
+    }
 }

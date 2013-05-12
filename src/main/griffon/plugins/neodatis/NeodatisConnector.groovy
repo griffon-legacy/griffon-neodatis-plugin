@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2012 the original author or authors.
+ * Copyright 2011-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package griffon.plugins.neodatis
 import griffon.core.GriffonApplication
 import griffon.util.Environment
 import griffon.util.Metadata
-import griffon.util.CallableWithArgs
 import griffon.util.ConfigUtils
 
 import org.slf4j.Logger
@@ -31,98 +30,108 @@ import org.neodatis.odb.*
  * @author Andres Almiray
  */
 @Singleton
-final class NeodatisConnector implements NeodatisProvider {
+final class NeodatisConnector {
+    private static final String DEFAULT = 'default'
+    private static final Logger LOG = LoggerFactory.getLogger(NeodatisConnector)
     private bootstrap
 
-    private static final Logger LOG = LoggerFactory.getLogger(NeodatisConnector)
-
-    Object withOdb(String databaseName = 'default', Closure closure) {
-        return OdbHolder.instance.withOdb(databaseName, closure)
-    }
-
-    public <T> T withOdb(String databaseName = 'default', CallableWithArgs<T> callable) {
-        return OdbHolder.instance.withOdb(databaseName, callable)
-    }
-
-    // ======================================================
-
     ConfigObject createConfig(GriffonApplication app) {
-        ConfigUtils.loadConfigWithI18n('NeodatisConfig')
+        if (!app.config.pluginConfig.neodatis) {
+            app.config.pluginConfig.neodatis = ConfigUtils.loadConfigWithI18n('NeodatisConfig')
+        }
+        app.config.pluginConfig.neodatis
     }
 
     private ConfigObject narrowConfig(ConfigObject config, String databaseName) {
-        return databaseName == 'default' ? config.database : config.databases[databaseName]
+        if (config.containsKey('database') && databaseName == DEFAULT) {
+            return config.database
+        } else if (config.containsKey('databases')) {
+            return config.databases[databaseName]
+        }
+        return config
     }
 
-    ODB connect(GriffonApplication app, ConfigObject config, String databaseName = 'default') {
+    ODB connect(GriffonApplication app, ConfigObject config, String databaseName = DEFAULT) {
         if (OdbHolder.instance.isDatabaseConnected(databaseName)) {
             return OdbHolder.instance.getDatabase(databaseName)
         }
 
         config = narrowConfig(config, databaseName)
         app.event('NeodatisConnectStart', [config, databaseName])
-        ODB db = startOdb(config)
-        OdbHolder.instance.setDatabase(databaseName, db)
+        ODB database = startNeodatis(config)
+        OdbHolder.instance.setDatabase(databaseName, database)
         bootstrap = app.class.classLoader.loadClass('BootstrapNeodatis').newInstance()
         bootstrap.metaClass.app = app
-        bootstrap.init(databaseName, db)
-        app.event('NeodatisConnectEnd', [databaseName, db])
-        db
+        resolveNeodatisProvider(app).withOdb { dn, odb -> bootstrap.init(dn, odb) }
+        app.event('NeodatisConnectEnd', [databaseName, database])
+        database
     }
 
-    void disconnect(GriffonApplication app, ConfigObject config, String databaseName = 'default') {
+    void disconnect(GriffonApplication app, ConfigObject config, String databaseName = DEFAULT) {
         if (OdbHolder.instance.isDatabaseConnected(databaseName)) {
             config = narrowConfig(config, databaseName)
-            ODB db = OdbHolder.instance.getDatabase(databaseName)
-            app.event('DatabaseDisconnectStart', [config, databaseName, db])
-            bootstrap.destroy(databaseName, db)
-            stopOdb(config, db)
-            app.event('DatabaseDisconnectEnd', [config, databaseName])
+            ODB database = OdbHolder.instance.getDatabase(databaseName)
+            app.event('NeodatisDisconnectStart', [config, databaseName, database])
+            resolveNeodatisProvider(app).withOdb { dn, odb -> bootstrap.destroy(dn, odb) }
+            stopNeodatis(config, database)
+            app.event('NeodatisDisconnectEnd', [config, databaseName])
             OdbHolder.instance.disconnectDatabase(databaseName)
         }
     }
 
-    private ODB startOdb(ConfigObject config) {
+    NeodatisProvider resolveNeodatisProvider(GriffonApplication app) {
+        def neodatisProvider = app.config.neodatisProvider
+        if (neodatisProvider instanceof Class) {
+            neodatisProvider = neodatisProvider.newInstance()
+            app.config.neodatisProvider = neodatisProvider
+        } else if (!neodatisProvider) {
+            neodatisProvider = DefaultNeodatisProvider.instance
+            app.config.neodatisProvider = neodatisProvider
+        }
+        neodatisProvider
+    }
+
+    private ODB startNeodatis(ConfigObject config) {
         boolean isClient = config.client ?: false
         String alias = config.alias ?: 'neodatis.odb'
 
         NeoDatisConfig neodatisConfig = NeoDatis.getConfig()
         config.config.each { key, value ->
+            if (key in ['class', 'metaClass']) return
             try {
                 neodatisConfig[key] = value
-                return
             } catch(MissingPropertyException mpe) {
                 // ignore
             }
         }
 
-        if(isClient) {
+        if (isClient) {
             return NeoDatis.openClient(alias, neodatisConfig)
         } else {
             File aliasFile = new File(alias)
-            if(!aliasFile.absolute) aliasFile = new File(Metadata.current.getGriffonWorkingDir(), alias)
+            if (!aliasFile.absolute) aliasFile = new File(Metadata.current.getGriffonWorkingDir(), alias)
             aliasFile.parentFile?.mkdirs()
             return NeoDatis.open(aliasFile.absolutePath, neodatisConfig)
         }
     }
 
-    private void stopOdb(ConfigObject config, ODB db) {
+    private void stopNeodatis(ConfigObject config, ODB db) {
         boolean isClient = config.client ?: false
         String alias = config.alias ?: 'neodatis/db.odb'
 
         File aliasFile = new File(alias)
-        if(!aliasFile.absolute) aliasFile = new File(Metadata.current.getGriffonWorkingDir(), alias)
+        if (!aliasFile.absolute) aliasFile = new File(Metadata.current.getGriffonWorkingDir(), alias)
 
         switch(Environment.current) {
             case Environment.DEVELOPMENT:
             case Environment.TEST:
-                if(isClient) return
+                if (isClient) return
                 // Runtime.getRuntime().addShutdownHook {
                     aliasFile.parentFile?.eachFileRecurse { f -> 
-                        try { if(f?.exists()) f.delete() }
+                        try { if (f?.exists()) f.delete() }
                         catch(IOException ioe) { /* ignore */ }
                     }
-                    try { if(aliasFile?.exists()) aliasFile.delete() }
+                    try { if (aliasFile?.exists()) aliasFile.delete() }
                     catch(IOException ioe) { /* ignore */ }
                 // }
             default:

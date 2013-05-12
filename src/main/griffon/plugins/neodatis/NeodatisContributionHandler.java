@@ -22,7 +22,11 @@ import groovy.lang.Closure;
 /**
  * @author Andres Almiray
  */
-public interface NeodatisProvider {
+public interface NeodatisContributionHandler {
+    void setNeodatisProvider(NeodatisProvider provider);
+
+    NeodatisProvider getNeodatisProvider();
+
     <R> R withOdb(Closure<R> closure);
 
     <R> R withOdb(String databaseName, Closure<R> closure);

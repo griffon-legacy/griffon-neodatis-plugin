@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-package griffon.plugins.neodatis;
-
-import griffon.util.CallableWithArgs;
-import groovy.lang.Closure;
+package dsld
 
 /**
  * @author Andres Almiray
  */
-public interface NeodatisProvider {
-    <R> R withOdb(Closure<R> closure);
 
-    <R> R withOdb(String databaseName, Closure<R> closure);
-
-    <R> R withOdb(CallableWithArgs<R> callable);
-
-    <R> R withOdb(String databaseName, CallableWithArgs<R> callable);
+contribute(enclosingClass(annotatedBy('griffon.plugins.neodatis.NeodatisAware'))) {
+    provider = "Neodatis DSL"
+    delegatesTo "griffon.plugins.neodatis.NeodatisContributionHandler"
 }
